@@ -12,9 +12,62 @@
     let passportExpiry = existingPassportExpiry;
 
     if (!passportExpiry) {
-        passportExpiry = prompt(
-            "Enter passport expiry date (DD.MM.YYYY):"
-        )?.trim() || "";
+
+        while (true) {
+
+            const input = prompt(
+                "Enter passport expiry date (DD.MM.YYYY):"
+            );
+
+            // User cancelled
+            if (input === null) {
+                alert(
+                    "❌ Passport expiry date is required."
+                );
+                continue;
+            }
+
+            const value = input.trim();
+
+            // Strict DD.MM.YYYY format
+            const formatMatch =
+                /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
+
+            if (!formatMatch) {
+                alert(
+                    "Invalid format. Please enter the date exactly as:\n" +
+                    "DD.MM.YYYY\n" +
+                    "e.g. 31.12.2040"
+                );
+                continue;
+            }
+
+            const [, day, month, year] = formatMatch;
+
+            // Validate the date actually exists
+            const date = new Date(
+                Number(year),
+                Number(month) - 1,
+                Number(day)
+            );
+
+            const isValidDate =
+                date.getFullYear() === Number(year) &&
+                date.getMonth() === Number(month) - 1 &&
+                date.getDate() === Number(day);
+
+            if (!isValidDate) {
+                alert(
+                    "Invalid date.\n" +
+                    "Please enter a real calendar date."
+                );
+                continue;
+            }
+
+            passportExpiry = value;
+            break;
+
+        }
     }
 
     const frame = document.querySelector(
