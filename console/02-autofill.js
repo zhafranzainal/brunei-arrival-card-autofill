@@ -8,6 +8,14 @@
         return;
     }
 
+    // Fields that may not exist in the existing card
+    const userInput = {
+        passportExpiry: ""
+    };
+
+    const existingPassportExpiry = data.P3422_IDENT_EXPIRY_DATE?.trim();
+    const passportExpiry = existingPassportExpiry || userInput.passportExpiry;
+
     const frame = document.querySelector(
         'iframe[title="E-Arrival Cards"]'
     );
@@ -32,7 +40,6 @@
         "P3422_NATION_CODE_ICAO",
         "P3422_IDENT_DOCUMENT_NO",
         "P3422_PLACE_OF_ISSUE",
-        "P3422_IDENT_EXPIRY_DATE",
         "P3422_FOREIGN_DOCUMENT_NO",
 
         // General Information
@@ -162,9 +169,15 @@
 
     }
 
+    // Copy reusable fields from existing card
     for (const id of fields) {
         setItem(id, data[id]);
     }
+
+    setItem(
+        "P3422_IDENT_EXPIRY_DATE",
+        passportExpiry
+    );
 
     console.log(`✅ Filled ${filled.length} fields.`);
 
