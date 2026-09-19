@@ -1,13 +1,7 @@
 (() => {
 
     const frame = document.querySelector('iframe[title="E-Arrival Cards"]');
-
-    if (!frame) {
-        console.error("❌ E-Arrival Cards iframe not found");
-        return;
-    }
-
-    const doc = frame.contentDocument;
+    const doc = frame ? frame.contentDocument : document;
 
     if (!doc) {
         console.error("❌ Cannot access iframe document");
