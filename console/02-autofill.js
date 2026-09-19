@@ -30,8 +30,7 @@
             const value = input.trim();
 
             // Strict DD.MM.YYYY format
-            const formatMatch =
-                /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
+            const formatMatch = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
 
             if (!formatMatch) {
                 alert(
@@ -97,9 +96,7 @@
     const MS_PER_DAY = 1000 * 60 * 60 * 24;
     const lengthOfStay = Math.round((departure.date - arrival.date) / MS_PER_DAY) + 1;
 
-    const frame = document.querySelector(
-        'iframe[title="E-Arrival Cards"]'
-    );
+    const frame = document.querySelector('iframe[title="E-Arrival Cards"]');
 
     if (!frame?.contentDocument) {
         console.error("❌ E-Arrival Cards iframe not found.");
@@ -160,21 +157,15 @@
         const el = doc.getElementById(id);
 
         if (!el) {
-            failed.push({
-                id,
-                value,
-                reason: "element not found"
-            });
+            failed.push({ id, value, reason: "element not found" });
             return;
         }
 
         // Use APEX's own API when available
         try {
             const apexInFrame = frame.contentWindow.apex;
-
             if (apexInFrame?.item) {
                 const item = apexInFrame.item(id);
-
                 if (item?.setValue) {
                     item.setValue(value ?? "");
                     filled.push({ id, value, method: "APEX" });
@@ -190,9 +181,7 @@
 
             if (el.type === "radio") {
 
-                const radios = doc.querySelectorAll(
-                    `input[name="${CSS.escape(id)}"]`
-                );
+                const radios = doc.querySelectorAll(`input[name="${CSS.escape(id)}"]`);
 
                 let found = false;
 
@@ -202,20 +191,14 @@
                     radio.checked = checked;
 
                     if (checked) {
-                        radio.dispatchEvent(
-                            new Event("change", { bubbles: true })
-                        );
+                        radio.dispatchEvent(new Event("change", { bubbles: true }));
                         found = true;
                     }
 
                 });
 
                 if (found) {
-                    filled.push({
-                        id,
-                        value,
-                        method: "DOM radio"
-                    });
+                    filled.push({ id, value, method: "DOM radio" });
                     return;
                 }
 
@@ -223,26 +206,13 @@
 
             el.value = value ?? "";
 
-            el.dispatchEvent(
-                new Event("input", { bubbles: true })
-            );
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
 
-            el.dispatchEvent(
-                new Event("change", { bubbles: true })
-            );
-
-            filled.push({
-                id,
-                value,
-                method: "DOM"
-            });
+            filled.push({ id, value, method: "DOM" });
 
         } catch (e) {
-            failed.push({
-                id,
-                value,
-                reason: String(e)
-            });
+            failed.push({ id, value, reason: String(e) });
         }
 
     }
@@ -252,25 +222,10 @@
         setItem(id, data[id]);
     }
 
-    setItem(
-        "P3422_IDENT_EXPIRY_DATE",
-        passportExpiry.value
-    );
-
-    setItem(
-        "P3422_INTENDED_LENGTH_OF_STAY",
-        lengthOfStay
-    );
-
-    setItem(
-        "P3422_PLANNED_DATE_OF_ARRIVAL",
-        arrival.value
-    );
-
-    setItem(
-        "P3422_PLANNED_DATE_OF_DEPARTURE",
-        departure.value
-    );
+    setItem("P3422_IDENT_EXPIRY_DATE", passportExpiry.value);
+    setItem("P3422_INTENDED_LENGTH_OF_STAY", lengthOfStay);
+    setItem("P3422_PLANNED_DATE_OF_ARRIVAL", arrival.value);
+    setItem("P3422_PLANNED_DATE_OF_DEPARTURE", departure.value);
 
     console.log(`✅ Filled ${filled.length} fields.`);
 
@@ -282,8 +237,6 @@
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("✅ AUTOFILL COMPLETE");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(
-        "⚠️ Review the entire form manually before submitting."
-    );
+    console.log("⚠️ Review the entire form manually before submitting.");
 
 })();

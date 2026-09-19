@@ -64,11 +64,7 @@
     }
 
     window.__arrivalCardCopy = data;
-
     console.table(data);
-
-    console.log(
-        "✅ Captured from the actual E-Arrival Cards iframe."
-    );
+    console.log("✅ Captured from the actual E-Arrival Cards iframe.");
 
 })();
