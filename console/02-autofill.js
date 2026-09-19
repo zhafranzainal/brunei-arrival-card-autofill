@@ -19,7 +19,7 @@
 
         while (true) {
 
-            const input = prompt(`${label}\n\nEnter date as DD.MM.YYYY:`);
+            const input = prompt(`${label} (DD.MM.YYYY):`);
 
             // User cancelled
             if (input === null) {
