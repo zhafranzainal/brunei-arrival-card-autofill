@@ -74,16 +74,24 @@
         data.P3422_IDENT_EXPIRY_DATE
     );
 
-    const arrival = promptDate("Enter planned arrival date");
-    const departure = promptDate("Enter planned departure date");
+    let arrival, departure;
 
-    // Departure cannot be before arrival
-    if (departure.date < arrival.date) {
-        alert(
-            "❌ Departure date cannot be before arrival date.\n" +
-            `Invalid trip dates: ${arrival.value} → ${departure.value}`
-        );
-        return;
+    while (true) {
+
+        arrival = promptDate("Enter planned arrival date");
+        departure = promptDate("Enter planned departure date");
+
+        // Departure cannot be before arrival
+        if (departure.date < arrival.date) {
+            alert(
+                "❌ Departure date cannot be before arrival date.\n" +
+                `Invalid trip dates: ${arrival.value} → ${departure.value}`
+            );
+            continue;
+        }
+
+        break;
+
     }
 
     const MS_PER_DAY = 1000 * 60 * 60 * 24;
