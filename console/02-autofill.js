@@ -8,13 +8,14 @@
         return;
     }
 
-    // Fields that may not exist in the existing card
-    const userInput = {
-        passportExpiry: ""
-    };
-
     const existingPassportExpiry = data.P3422_IDENT_EXPIRY_DATE?.trim();
-    const passportExpiry = existingPassportExpiry || userInput.passportExpiry;
+    let passportExpiry = existingPassportExpiry;
+
+    if (!passportExpiry) {
+        passportExpiry = prompt(
+            "Enter passport expiry date (DD.MM.YYYY):"
+        )?.trim() || "";
+    }
 
     const frame = document.querySelector(
         'iframe[title="E-Arrival Cards"]'
