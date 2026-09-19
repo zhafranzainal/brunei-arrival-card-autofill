@@ -312,7 +312,17 @@
 
         }
 
-        for (const id of COPYABLE_FIELDS) setItem(id, data[id]);
+        // Form requires 2-digit day and month (e.g. "01" not "1")
+        const TWO_DIGIT_FIELDS = new Set(["P3422_DOB_DAY", "P3422_DOB_MONTH"]);
+        const padTwoDigits = (value) => {
+            const str = String(value ?? "").trim();
+            return str.length === 1 ? `0${str}` : str;
+        };
+
+        for (const id of COPYABLE_FIELDS) {
+            const value = TWO_DIGIT_FIELDS.has(id) ? padTwoDigits(data[id]) : data[id];
+            setItem(id, value);
+        }
         setItem(PASSPORT_EXPIRY_DATE_FIELD, passportExpiry.value);
         setItem("P3422_INTENDED_LENGTH_OF_STAY", lengthOfStay);
         setItem("P3422_PLANNED_DATE_OF_ARRIVAL", arrival.value);

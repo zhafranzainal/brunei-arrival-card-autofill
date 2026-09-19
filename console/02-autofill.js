@@ -217,9 +217,19 @@
 
     }
 
+    // Fields that need zero-padding to 2 digits before being filled in.
+    const TWO_DIGIT_FIELDS = new Set(["P3422_DOB_DAY", "P3422_DOB_MONTH"]);
+
+    // Form requires 2-digit day and month (e.g. "01" not "1")
+    function padTwoDigits(value) {
+        const str = String(value ?? "").trim();
+        return str.length === 1 ? `0${str}` : str;
+    }
+
     // Copy reusable fields from existing card
     for (const id of fields) {
-        setItem(id, data[id]);
+        const value = TWO_DIGIT_FIELDS.has(id) ? padTwoDigits(data[id]) : data[id];
+        setItem(id, value);
     }
 
     setItem("P3422_IDENT_EXPIRY_DATE", passportExpiry.value);
