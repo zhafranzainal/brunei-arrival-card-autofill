@@ -41,62 +41,96 @@
         );
     }
 
+    // Same as findByText, but accepts an array of candidate texts (first match wins).
+    // Useful for bilingual labels, e.g. ["Batal", "Cancel"].
+    function findByTextAny(root, selector, texts) {
+        for (const text of texts) {
+            const el = findByText(root, selector, text);
+            if (el) return el;
+        }
+        return undefined;
+    }
+
     function click(el) {
         el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }
+
+    // waitFor + click + settle, collapsed into one call.
+    async function clickWhenFound(predicate, root, label, settleMs = SETTLE_MS) {
+        const el = await waitFor(predicate, root, label);
+        click(el);
+        await sleep(settleMs);
+        return el;
     }
 
     function getArrivalFrame() {
         return document.querySelector('iframe[title="E-Arrival Cards"]');
     }
 
+    // Open (or reopen) the E-Arrival Cards dialog and return its iframe.
+    async function openEArrivalCardsDialog(label = "E-Arrival Cards nav card") {
+        await clickWhenFound(
+            (root) => findByText(root, 'a[aria-roledescription="dialog link"]', "E-Arrival Cards"),
+            document,
+            label
+        );
+        const frame = await waitFor(getArrivalFrame, document, "E-Arrival Cards iframe");
+        await sleep(SETTLE_MS);
+        return frame;
+    }
+
+    // Single source of truth for fields outright copied from old arrival card.
+    // (Expiry date is handled separately since it would be prompted if unavailable)
+    const COPYABLE_FIELDS = [
+
+        // Personal Identity
+        "P3422_FULL_NAME",
+        "P3422_DOB_DAY",
+        "P3422_DOB_MONTH",
+        "P3422_DOB_YEAR",
+        "P3422_GENDER_CODE",
+        "P3422_PLACE_OF_BIRTH",
+        "P3422_NATION_CODE_ICAO",
+        "P3422_IDENT_DOCUMENT_NO",
+        "P3422_PLACE_OF_ISSUE",
+        "P3422_FOREIGN_DOCUMENT_NO",
+
+        // General Information
+        "P3422_ADDRESS_HOME",
+        "P3422_OCCUPATION",
+        "P3422_Q_IS_FIRST_VISIT",
+        "P3422_Q_IS_BACKPACK",
+        "P3422_Q_IS_DIFFERENT_PASSPORT",
+        "P3422_Q_HAS_PROHIBITED",
+        "P3422_Q_HAS_A_OR_SA",
+        "P3422_MOVEMENT_REASON_CODE",
+        "P3422_MOVEMENT_REASON_OTHER",
+        "P3422_ACCOMODATION_CODE",
+        "P3422_ADDRESS_ACCOMODATION",
+
+        // Arrival
+        "P3422_CAMPANION_COUNT_IN",
+        "P3422_LAST_EMBARKATION",
+        "P3422_TRANSPORT_FLIGHT_NO_IN",
+        "P3422_TRANSPORT_VEHICLE_NO_IN",
+        "P3422_TRANSPORT_SHIP_NAME_IN",
+
+        // Departure
+        "P3422_CAMPANION_COUNT_OUT",
+        "P3422_IMMEDIATE_DESTINATION",
+        "P3422_TRANSPORT_FLIGHT_NO_OUT",
+        "P3422_TRANSPORT_VEHICLE_NO_OUT",
+        "P3422_TRANSPORT_SHIP_NAME_OUT",
+    ];
+
+    const PASSPORT_EXPIRY_DATE_FIELD = "P3422_IDENT_EXPIRY_DATE";
+
     function extractFromCurrentCard() {
         const frame = getArrivalFrame();
         const doc = frame ? frame.contentDocument : document;
         if (!doc) throw new Error("Cannot access iframe document");
 
-        const fields = [
-
-            // Personal Identity
-            "P3422_FULL_NAME",
-            "P3422_DOB_DAY",
-            "P3422_DOB_MONTH",
-            "P3422_DOB_YEAR",
-            "P3422_GENDER_CODE",
-            "P3422_PLACE_OF_BIRTH",
-            "P3422_NATION_CODE_ICAO",
-            "P3422_IDENT_DOCUMENT_NO",
-            "P3422_PLACE_OF_ISSUE",
-            "P3422_IDENT_EXPIRY_DATE",
-            "P3422_FOREIGN_DOCUMENT_NO",
-
-            // General Information
-            "P3422_ADDRESS_HOME",
-            "P3422_OCCUPATION",
-            "P3422_Q_IS_FIRST_VISIT",
-            "P3422_Q_IS_BACKPACK",
-            "P3422_Q_IS_DIFFERENT_PASSPORT",
-            "P3422_Q_HAS_PROHIBITED",
-            "P3422_Q_HAS_A_OR_SA",
-            "P3422_MOVEMENT_REASON_CODE",
-            "P3422_MOVEMENT_REASON_OTHER",
-            "P3422_ACCOMODATION_CODE",
-            "P3422_ADDRESS_ACCOMODATION",
-
-            // Arrival
-            "P3422_CAMPANION_COUNT_IN",
-            "P3422_LAST_EMBARKATION",
-            "P3422_TRANSPORT_FLIGHT_NO_IN",
-            "P3422_TRANSPORT_VEHICLE_NO_IN",
-            "P3422_TRANSPORT_SHIP_NAME_IN",
-
-            // Departure
-            "P3422_CAMPANION_COUNT_OUT",
-            "P3422_IMMEDIATE_DESTINATION",
-            "P3422_TRANSPORT_FLIGHT_NO_OUT",
-            "P3422_TRANSPORT_VEHICLE_NO_OUT",
-            "P3422_TRANSPORT_SHIP_NAME_OUT"
-
-        ];
+        const fields = [...COPYABLE_FIELDS, PASSPORT_EXPIRY_DATE_FIELD];
 
         const data = {};
         for (const id of fields) {
@@ -175,7 +209,7 @@
 
         const passportExpiry = promptDate(
             "Enter passport expiry date",
-            data.P3422_IDENT_EXPIRY_DATE
+            data[PASSPORT_EXPIRY_DATE_FIELD]
         );
 
         let arrival, departure;
@@ -201,7 +235,7 @@
         const MS_PER_DAY = 1000 * 60 * 60 * 24;
         const lengthOfStay = Math.round((departure.date - arrival.date) / MS_PER_DAY) + 1;
 
-        const frame = document.querySelector('iframe[title="E-Arrival Cards"]');
+        const frame = getArrivalFrame();
 
         if (!frame?.contentDocument) {
             console.error("❌ E-Arrival Cards iframe not found.");
@@ -209,50 +243,6 @@
         }
 
         const doc = frame.contentDocument;
-
-        // Fields that are safe to copy from the existing card
-        const fields = [
-
-            // Personal Identity
-            "P3422_FULL_NAME",
-            "P3422_DOB_DAY",
-            "P3422_DOB_MONTH",
-            "P3422_DOB_YEAR",
-            "P3422_GENDER_CODE",
-            "P3422_PLACE_OF_BIRTH",
-            "P3422_NATION_CODE_ICAO",
-            "P3422_IDENT_DOCUMENT_NO",
-            "P3422_PLACE_OF_ISSUE",
-            "P3422_FOREIGN_DOCUMENT_NO",
-
-            // General Information
-            "P3422_ADDRESS_HOME",
-            "P3422_OCCUPATION",
-            "P3422_Q_IS_FIRST_VISIT",
-            "P3422_Q_IS_BACKPACK",
-            "P3422_Q_IS_DIFFERENT_PASSPORT",
-            "P3422_Q_HAS_PROHIBITED",
-            "P3422_Q_HAS_A_OR_SA",
-            "P3422_MOVEMENT_REASON_CODE",
-            "P3422_MOVEMENT_REASON_OTHER",
-            "P3422_ACCOMODATION_CODE",
-            "P3422_ADDRESS_ACCOMODATION",
-
-            // Arrival
-            "P3422_CAMPANION_COUNT_IN",
-            "P3422_LAST_EMBARKATION",
-            "P3422_TRANSPORT_FLIGHT_NO_IN",
-            "P3422_TRANSPORT_VEHICLE_NO_IN",
-            "P3422_TRANSPORT_SHIP_NAME_IN",
-
-            // Departure
-            "P3422_CAMPANION_COUNT_OUT",
-            "P3422_IMMEDIATE_DESTINATION",
-            "P3422_TRANSPORT_FLIGHT_NO_OUT",
-            "P3422_TRANSPORT_VEHICLE_NO_OUT",
-            "P3422_TRANSPORT_SHIP_NAME_OUT"
-
-        ];
 
         const filled = [];
         const failed = [];
@@ -322,13 +312,11 @@
 
         }
 
-        for (const id of fields) setItem(id, data[id]);
-        setItem("P3422_IDENT_EXPIRY_DATE", passportExpiry.value);
+        for (const id of COPYABLE_FIELDS) setItem(id, data[id]);
+        setItem(PASSPORT_EXPIRY_DATE_FIELD, passportExpiry.value);
         setItem("P3422_INTENDED_LENGTH_OF_STAY", lengthOfStay);
         setItem("P3422_PLANNED_DATE_OF_ARRIVAL", arrival.value);
         setItem("P3422_PLANNED_DATE_OF_DEPARTURE", departure.value);
-
-        console.log(`✅ Filled ${filled.length} fields.`);
 
         console.log(`Filled ${filled.length} fields.`);
         if (failed.length) {
@@ -341,67 +329,43 @@
     // ============ NAVIGATION CHAIN ============
     try {
         console.log("Step 1: opening E-Arrival Cards dialog...");
-        const navLink = await waitFor(
-            (root) => findByText(root, 'a[aria-roledescription="dialog link"]', "E-Arrival Cards"),
-            document,
-            "E-Arrival Cards nav card"
-        );
-        click(navLink);
-        await sleep(SETTLE_MS);
+        const frame1 = await openEArrivalCardsDialog();
 
-        console.log("Step 2: waiting for iframe + switching to Old E-Arrival Cards tab...");
-        const frame1 = await waitFor(getArrivalFrame, document, "E-Arrival Cards iframe");
-        await sleep(SETTLE_MS);
-        const oldTab = await waitFor(
+        console.log("Step 2: switching to Old E-Arrival Cards tab...");
+        await clickWhenFound(
             (root) => findByText(root, 'a[role="tab"]', "Old E-Arrival Cards"),
             frame1.contentDocument,
             '"Old E-Arrival Cards" tab'
         );
-        click(oldTab);
-        await sleep(SETTLE_MS);
 
         console.log("Step 3: opening a specific old card...");
-        const oldCardLink = await waitFor(
+        await clickWhenFound(
             (root) => root.querySelector(".a-CardView-fullLink"),
             frame1.contentDocument,
-            "an old card entry"
+            "an old card entry",
+            SETTLE_MS * 2 // detail view takes a moment to render
         );
-        click(oldCardLink);
-        await sleep(SETTLE_MS * 2); // detail view takes a moment to render
 
         console.log("Step 4: extracting data from the old card view...");
-        const frame2 = await waitFor(getArrivalFrame, document, "E-Arrival Card detail iframe");
+        await waitFor(getArrivalFrame, document, "E-Arrival Card detail iframe");
         await sleep(SETTLE_MS);
-        const data = extractFromCurrentCard.call(null); // uses getArrivalFrame() internally
-        void frame2;
+        const data = extractFromCurrentCard();
 
         console.log("Step 5: closing the view (Batal / Cancel)...");
-        const cancelBtn = await waitFor(
-            (root) => findByText(root, "button", "Batal") || findByText(root, "button", "Cancel"),
+        await clickWhenFound(
+            (root) => findByTextAny(root, "button", ["Batal", "Cancel"]),
             frame1.contentDocument,
             '"Batal / Cancel" button'
         );
-        click(cancelBtn);
-        await sleep(SETTLE_MS);
 
         console.log("Step 6: reopening E-Arrival Cards, then Create E-Arrival Card...");
-        const navLink2 = await waitFor(
-            (root) => findByText(root, 'a[aria-roledescription="dialog link"]', "E-Arrival Cards"),
-            document,
-            "E-Arrival Cards nav card (2nd time)"
-        );
-        click(navLink2);
-        await sleep(SETTLE_MS);
-
-        const frame3 = await waitFor(getArrivalFrame, document, "E-Arrival Cards iframe (2nd time)");
-        await sleep(SETTLE_MS);
-        const createBtn = await waitFor(
+        const frame3 = await openEArrivalCardsDialog("E-Arrival Cards nav card (2nd time)");
+        await clickWhenFound(
             (root) => findByText(root, "button", "Create E-Arrival Card"),
             frame3.contentDocument,
-            '"Create E-Arrival Card" button'
+            '"Create E-Arrival Card" button',
+            SETTLE_MS * 2 // blank form takes a moment to render
         );
-        click(createBtn);
-        await sleep(SETTLE_MS * 2); // blank form takes a moment to render
 
         console.log("Step 7: waiting for the blank form, then autofilling...");
         await waitFor(
