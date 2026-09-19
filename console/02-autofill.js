@@ -8,22 +8,22 @@
         return;
     }
 
-    const existingPassportExpiry = data.P3422_IDENT_EXPIRY_DATE?.trim();
-    let passportExpiry = existingPassportExpiry;
+    // If existingValue is already valid, used without prompting
+    function promptDate(label, existingValue) {
 
-    if (!passportExpiry) {
+        const existing = existingValue?.trim();
+
+        if (existing) {
+            return { value: existing };
+        }
 
         while (true) {
 
-            const input = prompt(
-                "Enter passport expiry date (DD.MM.YYYY):"
-            );
+            const input = prompt(`${label}\n\nEnter date as DD.MM.YYYY:`);
 
             // User cancelled
             if (input === null) {
-                alert(
-                    "❌ Passport expiry date is required."
-                );
+                alert(`❌ ${label} is required.`);
                 continue;
             }
 
@@ -64,11 +64,30 @@
                 continue;
             }
 
-            passportExpiry = value;
-            break;
+            return { value, date };
 
         }
     }
+
+    const passportExpiry = promptDate(
+        "Enter passport expiry date",
+        data.P3422_IDENT_EXPIRY_DATE
+    );
+
+    const arrival = promptDate("Enter planned arrival date");
+    const departure = promptDate("Enter planned departure date");
+
+    // Departure cannot be before arrival
+    if (departure.date < arrival.date) {
+        alert(
+            "❌ Departure date cannot be before arrival date.\n" +
+            `Invalid trip dates: ${arrival.value} → ${departure.value}`
+        );
+        return;
+    }
+
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const lengthOfStay = Math.round((departure.date - arrival.date) / MS_PER_DAY) + 1;
 
     const frame = document.querySelector(
         'iframe[title="E-Arrival Cards"]'
@@ -104,14 +123,12 @@
         "P3422_Q_IS_DIFFERENT_PASSPORT",
         "P3422_Q_HAS_PROHIBITED",
         "P3422_Q_HAS_A_OR_SA",
-        "P3422_INTENDED_LENGTH_OF_STAY",
         "P3422_MOVEMENT_REASON_CODE",
         "P3422_MOVEMENT_REASON_OTHER",
         "P3422_ACCOMODATION_CODE",
         "P3422_ADDRESS_ACCOMODATION",
 
         // Arrival
-        "P3422_PLANNED_DATE_OF_ARRIVAL",
         "P3422_CAMPANION_COUNT_IN",
         "P3422_LAST_EMBARKATION",
         "P3422_TRANSPORT_FLIGHT_NO_IN",
@@ -119,7 +136,6 @@
         "P3422_TRANSPORT_SHIP_NAME_IN",
 
         // Departure
-        "P3422_PLANNED_DATE_OF_DEPARTURE",
         "P3422_CAMPANION_COUNT_OUT",
         "P3422_IMMEDIATE_DESTINATION",
         "P3422_TRANSPORT_FLIGHT_NO_OUT",
@@ -230,7 +246,22 @@
 
     setItem(
         "P3422_IDENT_EXPIRY_DATE",
-        passportExpiry
+        passportExpiry.value
+    );
+
+    setItem(
+        "P3422_INTENDED_LENGTH_OF_STAY",
+        lengthOfStay
+    );
+
+    setItem(
+        "P3422_PLANNED_DATE_OF_ARRIVAL",
+        arrival.value
+    );
+
+    setItem(
+        "P3422_PLANNED_DATE_OF_DEPARTURE",
+        departure.value
     );
 
     console.log(`✅ Filled ${filled.length} fields.`);
